@@ -1,10 +1,10 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 import requests
 
 app = FastAPI()
 
 OLLAMA_URL = "http://localhost:11434"
-MODEL_NAME = "qwen2.5-7B"
+MODEL_NAME = "qwen2.5:7b"
 
 
 @app.get("/health")
@@ -19,8 +19,31 @@ def ask(question: str):
         "messages": [{"role": "user", "content": question}],
         "stream": False,
     }
+    
+    try:
+        response = requests.post(f"{OLLAMA_URL}/api/chat", json=payload, timeout=120)
+    except requests.RequestException as e:
+        raise HTTPException(status_code=502, detail=f"Failed to reach Ollama: {e}")
+    
+    if response.status_code != 200:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Ollama error {response.status_code}: {response.text}",
+        )
 
-    response = requests.post(f"{OLLAMA_URL}/api/chat", json=payload)
-    result = response.json()
+    try:
+        result = response.json()
+    except ValueError:
+        raise HTTPException(status_code=502, detail=f"Invalid JSON from Ollama: {response.text}")
 
-    return {"answer": result["message"]["content"]}
+    # Debug: if shape is not what we expect, return it
+    if "message" not in result:
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "error": "Unexpected response shape from Ollama",
+                "ollama_response": result,
+            },
+        )
+
+    return {"answer": result["message"].get("content", "")}
