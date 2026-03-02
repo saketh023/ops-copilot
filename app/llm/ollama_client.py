@@ -4,6 +4,7 @@ from typing import List, Dict, Any
 
 class OllamaClient:
     def __init__(self, base_url: str, model: str):
+        self.name = "ollama"
         self.base_url = base_url.rstrip("/")
         self.model = model
 

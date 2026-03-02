@@ -1,10 +1,11 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
-
 from app.llm.factory import get_llm_client
+from dotenv import load_dotenv
 
 app = FastAPI(title="Ops Copilot", version="0.2")
 
+load_dotenv()
 llm = get_llm_client()
 
 class AskRequest(BaseModel):
@@ -29,6 +30,13 @@ def ask(req: AskRequest):
             temperature=req.temperature,
             num_ctx=req.num_ctx,
         )
-        return {"amswer": answer}
+
+        return {
+            "provider": getattr(llm, "name", "unknown"),
+            "model": getattr(llm, "model", "unknown"),
+            "answer": answer,
+        }
+
     except Exception as e:
         raise HTTPException(status_code=502, detail=str(e))
+    
