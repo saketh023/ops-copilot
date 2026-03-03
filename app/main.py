@@ -25,8 +25,31 @@ def health():
 @app.post("/ask")
 def ask(req: AskRequest):
     try:
+        system_prompt = """
+You are Ops Copilot, a backend reliability assistant.
+
+Always respond in this exact format:
+
+Diagnosis:
+<short explanation>
+
+Possible Causes:
+- bullet
+- bullet
+
+Next Checks:
+- bullet
+- bullet
+
+Confidence:
+Low | Medium | High
+"""
+
         answer = llm.chat(
-            messages=[{"role": "user", "content": req.question}],
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": req.question},
+            ],
             temperature=req.temperature,
             num_ctx=req.num_ctx,
         )
