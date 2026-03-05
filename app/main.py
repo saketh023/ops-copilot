@@ -5,6 +5,9 @@ from dotenv import load_dotenv
 
 from app.tools.log_tools import summarize_logs
 
+from app.tools.detector import detect_tool
+from app.tools.registry import get_tool, register_tool
+
 import json
 import re
 
@@ -51,6 +54,8 @@ app = FastAPI(title="Ops Copilot", version="0.2")
 load_dotenv()
 llm = get_llm_client()
 
+register_tool("summarize_logs", summarize_logs)
+
 
 class AskRequest(BaseModel):
     question: str = Field(..., min_length=1)
@@ -70,26 +75,25 @@ def health():
 @app.post("/ask")
 def ask(req: AskRequest):
     try:
+        tool_name = detect_tool(req.question)
 
-        # to detect if the input looks like some sort of logs
-        if "ERROR" in req.question or "WARN" in req.question:
-
-            tool_result = summarize_logs(req.question)
+        if tool_name:
+            tool_fn = get_tool(tool_name)
+            tool_result = tool_fn(req.question)
 
             tool_prompt = f"""
-User provided logs.
+        User provided input that requires tool: {tool_name}
 
-Log Summary:
-{tool_result}
+        Tool Result:
+        {tool_result}
 
-Use this summary to diagnose the issue.
-"""
+        Use the tool result to diagnose the issue.
+        """
 
             messages = [
                 {"role": "system", "content": SYSTEM_PROMPT_JSON},
                 {"role": "user", "content": tool_prompt},
             ]
-
         else:
             messages = [
                 {"role": "system", "content": SYSTEM_PROMPT_JSON},

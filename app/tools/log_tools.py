@@ -26,3 +26,7 @@ def summarize_logs(log_text: str):
         "error_lines": len(error_lines),
         "top_errors": dict(counts.most_common(5))
     }
+
+from app.tools.registry import register_tool
+
+register_tool("summarize_logs", summarize_logs)
